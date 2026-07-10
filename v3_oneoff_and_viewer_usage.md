@@ -2,11 +2,7 @@
 
 This guide explains how to run v3 SOFR shape HMM one-off experiments and render the interactive curve-regime viewer.
 
-Run commands from the project root:
-
-```powershell
-cd C:\Users\DillonTsang\Documents\ML_POC
-```
+Run commands from the project root.
 
 Use Python 3.13 for HMM work:
 
