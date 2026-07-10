@@ -1,0 +1,10 @@
+numpy
+pandas
+scipy
+scikit-learn
+hmmlearn
+matplotlib
+plotly
+
+Suggested install command:
+py -3.13 -m pip install numpy pandas scipy scikit-learn hmmlearn matplotlib plotly
