@@ -1,0 +1,2 @@
+meets_targets,covariance_scale,transition_blend,posterior_temperature,pct_days_max_prob_gt_99,n_genuinely_uncertain_days,mean_entropy,n_transitions,worst_transition_min_max_prob,best_transition_max_entropy,viterbi_churn_pct,behavioral_viterbi_churn_pct,state_alignment
+False,1.0,0.0,2.0,96.2176509621765,57,0.010579414757607142,4,0.593819857108537,0.6760838217289384,0.0,0.0,S1->S1; S2->S2; S3->S3; S4->S4; S5->S5

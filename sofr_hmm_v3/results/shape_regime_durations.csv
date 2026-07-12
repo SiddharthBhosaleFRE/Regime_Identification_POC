@@ -1,0 +1,6 @@
+state,n_episodes,avg_duration_days,min_days,max_days,flag
+1,1,138.0,138,138,ok
+2,1,497.0,497,497,ok
+3,1,410.0,410,410,ok
+4,1,191.0,191,191,ok
+5,1,271.0,271,271,ok

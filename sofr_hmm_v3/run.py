@@ -1,6 +1,8 @@
 # run.py - v3: runs LEVEL model (v1, kept for comparison) and revised SHAPE
 # model side by side. All outputs prefixed level_* / shape_*.
 
+import os
+
 import matplotlib
 matplotlib.use("Agg")
 
@@ -10,6 +12,12 @@ import config
 import features as feat
 import hmm_fit as hf
 import evaluate as ev
+
+RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+
+
+def _out(filename: str) -> str:
+    return os.path.join(RESULTS_DIR, filename)
 
 
 def _apply_shape_reporting_calibration(best_model, base_regimes):
@@ -44,7 +52,7 @@ def run_one_model(label, features_df, X, covariance_type, calibrate_posteriors=F
     best_k = results["best_k"]
     best_model = results[best_k]["model"]
 
-    ev.plot_bic(results, title=f"{label} model", save_path=f"{label}_bic_plot.png")
+    ev.plot_bic(results, title=f"{label} model", save_path=_out(f"{label}_bic_plot.png"))
 
     regimes = hf.decode(best_model, X, index=features_df.index)
     calibration_summary = None
@@ -86,51 +94,67 @@ def run_one_model(label, features_df, X, covariance_type, calibrate_posteriors=F
 
     ev.plot_regime_timeline(regimes, features_df, best_k,
                             title=f"{label.capitalize()} model — filtered probabilities",
-                            save_path=f"{label}_regime_timeline.png")
+                            save_path=_out(f"{label}_regime_timeline.png"))
     ev.plot_feature_distributions(features_df, regimes, best_k,
                                   title=f"{label.capitalize()} model — feature distributions",
-                                  save_path=f"{label}_feature_dists.png")
+                                  save_path=_out(f"{label}_feature_dists.png"))
 
-    regimes.to_csv(f"{label}_regime_assignments.csv")
-    stats.to_csv(f"{label}_regime_feature_means.csv")
-    moments.to_csv(f"{label}_regime_feature_mean_variances.csv", index=False)
-    tmat.to_csv(f"{label}_transition_matrix.csv")
-    dur.to_csv(f"{label}_regime_durations.csv", index=False)
-    diag.to_csv(f"{label}_filtered_diagnostics.csv", index=False)
+    regimes.to_csv(_out(f"{label}_regime_assignments.csv"))
+    stats.to_csv(_out(f"{label}_regime_feature_means.csv"))
+    moments.to_csv(_out(f"{label}_regime_feature_mean_variances.csv"), index=False)
+    tmat.to_csv(_out(f"{label}_transition_matrix.csv"))
+    dur.to_csv(_out(f"{label}_regime_durations.csv"), index=False)
+    diag.to_csv(_out(f"{label}_filtered_diagnostics.csv"), index=False)
     if calibration_summary is not None:
-        calibration_summary.to_csv(f"{label}_calibration_summary.csv", index=False)
+        calibration_summary.to_csv(_out(f"{label}_calibration_summary.csv"), index=False)
     if transition_diag is not None:
-        transition_diag.to_csv(f"{label}_transition_diagnostics.csv", index=False)
+        transition_diag.to_csv(_out(f"{label}_transition_diagnostics.csv"), index=False)
 
-    print(f"\n  Saved: {label}_*.csv, {label}_*.png")
+    print(f"\n  Saved: results/{label}_*.csv, results/{label}_*.png")
     return regimes, best_model, results, diag
 
 
 def main():
     print("=" * 60)
     print("SOFR Regime Identification - v3")
-    print("Level model (v1, kept) vs. revised shape model")
+    if config.RUN_LEVEL_MODEL:
+        print("Level model (v1, kept) vs. revised shape model")
+    else:
+        print("Shape model only (level model disabled via config.RUN_LEVEL_MODEL)")
     print("=" * 60)
+
+    os.makedirs(RESULTS_DIR, exist_ok=True)
 
     # Load raw curve once, share between both feature builders
     print("\n[1/3] Loading and splining curve data...")
     levels = feat.load_and_pivot(config.DATA_PATH)
 
     print("\n[2/3] Building feature sets...")
-    level_features_df, level_meta = feat.build_level_features(levels)
-    X_level, level_scaler = feat.scale_for_hmm(level_features_df)
-
     shape_features_df, shape_meta = feat.build_shape_features(levels)
     X_shape, shape_scaler = feat.scale_for_hmm(shape_features_df)
 
-    print("\n[3/3] Fitting both models...")
-    level_regimes, level_model, level_results, level_diag = run_one_model(
-        "level", level_features_df, X_level, config.LEVEL_COVARIANCE_TYPE
-    )
+    level_regimes = level_model = level_results = level_diag = None
+    if config.RUN_LEVEL_MODEL:
+        level_features_df, level_meta = feat.build_level_features(levels)
+        X_level, level_scaler = feat.scale_for_hmm(level_features_df)
+
+    print("\n[3/3] Fitting model(s)...")
+    if config.RUN_LEVEL_MODEL:
+        level_regimes, level_model, level_results, level_diag = run_one_model(
+            "level", level_features_df, X_level, config.LEVEL_COVARIANCE_TYPE
+        )
     shape_regimes, shape_model, shape_results, shape_diag = run_one_model(
         "shape", shape_features_df, X_shape, config.SHAPE_COVARIANCE_TYPE,
         calibrate_posteriors=config.SHAPE_CALIBRATE_POSTERIORS
     )
+
+    out = {
+        "shape": (shape_regimes, shape_model, shape_results),
+    }
+
+    if not config.RUN_LEVEL_MODEL:
+        print("\nDone. Shape model outputs: results/shape_*.csv, results/shape_*.png")
+        return out
 
     # ----------------------------------------------------------------
     # SIDE-BY-SIDE COMPARISON
@@ -158,17 +182,15 @@ def main():
     crosstab.columns.name = "shape_state"
     print("\nCross-tab — level state vs shape state (day counts):")
     print(crosstab.to_string())
-    crosstab.to_csv("level_vs_shape_crosstab.csv")
+    crosstab.to_csv(_out("level_vs_shape_crosstab.csv"))
 
-    print("\nSaved: level_vs_shape_crosstab.csv")
+    print("\nSaved: results/level_vs_shape_crosstab.csv")
     print("\nDone. Compare level_*.png against shape_*.png for the visual story.")
 
-    return {
-        "level": (level_regimes, level_model, level_results),
-        "shape": (shape_regimes, shape_model, shape_results),
-        "comparison": comparison,
-        "crosstab": crosstab,
-    }
+    out["level"] = (level_regimes, level_model, level_results)
+    out["comparison"] = comparison
+    out["crosstab"] = crosstab
+    return out
 
 
 if __name__ == "__main__":

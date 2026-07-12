@@ -1,6 +1,9 @@
 # config.py - v3: two parallel models, level regime + revised shape regime
 
-DATA_PATH = "Target_Zeros.csv"
+import os
+
+
+DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Target_Zeros.csv")
 
 # ── Fixed tenor grid (days) — same grid as Ridge V2 and v1 ────────────
 FIXED_GRID_DAYS = [
@@ -30,6 +33,11 @@ VOL_WINDOW = 21
 # ── PCA — used only by the LEVEL model ────────────────────────────────
 N_LEVEL_FACTORS  = 3
 N_CHANGE_FACTORS = 2
+
+# ── Model selection ─────────────────────────────────────────────────────
+# Set False to skip the level model entirely and only fit/report the shape
+# model. Level code path is kept intact for easy re-enabling.
+RUN_LEVEL_MODEL = False
 
 # ── HMM — shared settings, applied to both models ─────────────────────
 K_VALUES = [2, 3, 4, 5]

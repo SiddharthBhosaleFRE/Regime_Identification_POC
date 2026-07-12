@@ -1,0 +1,7 @@
+.DS_Store
+.vscode/
+__pycache__/
+*.pyc
+
+# Large local data files, not versioned
+sofr_hmm_v3/Target_Zeros.csv
